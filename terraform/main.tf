@@ -17,38 +17,27 @@ provider "azurerm" {
 resource "azurerm_resource_group" "rg_main" {
   name     = var.resource_group
   location = var.location
-  tags = {
-    environment = "DevOps ESGI"
-  }
 }
 
-#container registry
+# container registry
 resource "azurerm_container_registry" "acr" {
   name                     = var.acr_name
   resource_group_name      = azurerm_resource_group.rg_main.name
-  location                 = var.location
+  location                 = azurerm_resource_group.rg_main.location
   sku                      = "Standard"
-  admin_enabled            = true
-  tags = {
-    environment = "DevOps ESGI"
-  }
 }
 
-#cluster kubernetes
+# cluster kubernetes
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = var.aks_name
-  location            = var.location
+  location            = azurerm_resource_group.rg_main.location
   resource_group_name = azurerm_resource_group.rg_main.name
-  dns_prefix          = "dnsmuthulanmaxime"
+  dns_prefix          = var.aks_name
 
   default_node_pool {
     name       = "default"
-    node_count = 1
+    node_count = 2
     vm_size    = "Standard_B2s"
-  }
-
-  tags = {
-    environment = "DevOps ESGI"
   }
 
   identity {
@@ -56,31 +45,28 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 }
 
-#ip adress
-resource "azurerm_public_ip" "ip" {
-  name                = var.ip_name
-  location            = var.location
+# ip adress
+resource "azurerm_public_ip" "public_ip" {
+  name                = "aks-public-ip"
+  location            = azurerm_resource_group.rg_main.location
   resource_group_name = azurerm_resource_group.rg_main.name
   allocation_method   = "Static"
-  tags = {
-    environment = "DevOps ESGI"
-  }
 }
 
-#role assignment
-resource "azurerm_role_assignment" "acr_role" {
-  scope                = azurerm_kubernetes_cluster.aks.id
+# ACR PUll role assignments
+resource "azurerm_role_assignment" "acr_pull" {
+  scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.aks.identity[0].principal_id
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
 }
 
-resource "azurerm_role_assignment" "user_role" {
+# ACR Push role assignments
+resource "azurerm_role_assignment" "acr_push" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPush"
   principal_id         = var.user_object_id
 }
 
-#output
 output "ip" {
-  value = azurerm_public_ip.ip.ip_address
+  value = azurerm_public_ip.public_ip.ip_address
 }
