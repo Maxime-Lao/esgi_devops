@@ -1,3 +1,49 @@
+# Ecrivez ici les inscriptions et explications pour déployer l'infrastructure et l'application sur Azure
 
+Changer dans le fichier terraform.tfvars la variable user_id par votre identifiant Azure. Vous pouvez le récupérer en tapant la commande suivante :
 
-## Ecrivez ici les inscriptions et explications pour déployer l'infrastructure et l'application sur Azure
+```
+az login
+az ad signed-in-user show
+```
+
+Pour déployer l'infrastructure et l'application sur Azure, il faut exécuter les commandes suivantes :
+
+```
+terraform init
+terraform plan
+terraform apply
+```
+
+Pour build l'image docker de l'application, rendez-vous dans le dossier flask-app et exécutez la commande suivante :
+
+```
+docker build -t <containerRegistryLoginServer>/flask-app:v1 .
+```
+```
+
+Pour push l'image docker de l'application sur Azure, exécutez la commande suivante :
+
+```
+docker push <containerRegistryLoginServer>/flask-app:v1
+```
+
+Pour Kubernetes, il faut exécuter les commandes suivantes :
+
+```
+az aks get-credentials --resource-group <resourceGroupName> --name <aksClusterName>
+kubectl apply -f flask-app-deployment.yaml
+kubectl apply -f flask-app-service.yaml
+```
+
+Pour tester l'application, il faut exécuter la commande suivante :
+
+```
+curl http://<publicIp>:<port>
+```
+
+Pour détruire l'infrastructure et l'application sur Azure, il faut exécuter la commande suivante :
+
+```
+terraform destroy
+```
