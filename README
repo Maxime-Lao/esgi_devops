@@ -1,3 +1,82 @@
+# Ecrivez ici les inscriptions et explications pour déployer l'infrastructure et l'application sur Azure
+
+Changer dans le fichier terraform.tfvars la changer la variable "acr_name" et la variable "user_object_id" par votre identifiant Azure. Vous pouvez le récupérer en tapant la commande suivante :
+
+```
+az login
+az ad signed-in-user show
+```
+
+Pour déployer l'infrastructure et l'application sur Azure, il faut aller dans le dossier "terraform" et exécuter les commandes suivantes :
+
+```
+terraform init
+terraform plan
+terraform apply
+```
+
+Pour build l'image docker de l'application, il faut aller dans le dossier "flask-app" et se connecter à notre conteneur de registre. Pour faire ça, lancer cette commande en changeant le "acr-name" par le bon :
+
+```
+az acr login --name <acr-name>
+```
+
+Pour build l'image docker de l'application, il faut aller sur Azure et récupérer le "Serveur de connexion" et changer le "containerRegistryLoginServer" par ça, puis exécuter les commandes suivantes :
+
+```
+docker build -t <containerRegistryLoginServer>/flask-app:v1 .
+```
 
 
-## Ecrivez ici les inscriptions et explications pour déployer l'infrastructure et l'application sur Azure
+Pour push l'image docker de l'application sur Azure, il faut changer aussi changer le "containerRegistryLoginServer", puis exécuter la commande suivante :
+
+```
+docker push <containerRegistryLoginServer>/flask-app:v1
+```
+
+Pour Kubernetes, il faut aller dans le dossier "kubernetes" et modifier l'image "acrmuthumax.azurecr.io" du fichier "flask-app.yaml" par le bon :
+
+```
+image: <containerRegistryLoginServer>/flask-app:v1
+
+```
+
+Puis, il faut aller dans le dossier "kubernetes" et connectez vous au cluster kubernetes :
+
+```
+az aks get-credentials --resource-group <resourceGroupName> --name <aksClusterName>
+```
+Avant de déployer l'application vous devrez déployer un ingress controller (en utilisant helm) sur votre cluster
+K8s:
+
+```
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install nginx-ingress ingress-nginx/ingress-nginx --set controller.publishService.enabled=true
+```
+
+Maintenant, pour déployer vos fichiers yaml, faîtes ces commandes:
+
+```
+kubectl apply -f flask-app.yaml
+kubectl apply -f flask-ingress.yaml
+kubectl apply -f redis.yaml
+```
+
+Pour tester l'application, il faut d'abord trouver l'adresse ip externe et pour faire ça, faîtes cette commande et récupérer exécuter l'adresse ip externe du "LoadBalancer":
+
+```
+kubectl get svc
+```
+
+Puis, faîtes la commande suivante :
+
+```
+curl http://<publicIp>
+```
+
+Pour détruire l'infrastructure et l'application sur Azure, il faut exécuter la commande suivante :
+
+```
+terraform destroy
+```
